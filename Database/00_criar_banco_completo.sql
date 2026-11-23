@@ -1,12 +1,25 @@
-/* ============================================================
+﻿/* ============================================================
    PIM IV - Etapa 7: Projeto do Banco de Dados
-   Sistema: Pousada Maré Mansa (empresa fictícia)
+   Sistema: Zaya Mar Pousada (empresa fictícia)
    SGBD: Microsoft SQL Server 2019+ (T-SQL)
    Conteúdo: tabelas, relacionamentos, índices, procedures,
              triggers, views, segurança e dados de exemplo.
    ============================================================ */
 
-IF DB_ID('PousadaMareMansa') IS NULL CREATE DATABASE PousadaMareMansa;
+/* ============================================================
+   PIM IV - Zaya Mar Pousada: script ÚNICO (banco + procedures + usuários)
+   SQL Server 2017 ou superior. Rode TUDO de uma vez (F5 no SSMS).
+   ATENÇÃO: este script APAGA e recria o banco PousadaMareMansa.
+   ============================================================ */
+USE master;
+GO
+IF DB_ID('PousadaMareMansa') IS NOT NULL
+BEGIN
+    ALTER DATABASE PousadaMareMansa SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE PousadaMareMansa;
+END
+GO
+CREATE DATABASE PousadaMareMansa;
 GO
 USE PousadaMareMansa;
 GO
@@ -377,7 +390,7 @@ DENY SELECT, INSERT, UPDATE, DELETE ON Reserva      TO rl_site;
 DENY SELECT, INSERT, UPDATE, DELETE ON UsuarioAdmin TO rl_site, rl_recepcao;
 DENY SELECT ON LogReserva TO rl_site, rl_recepcao;
 -- Recepção vê dados mascarados (e-mail, telefone, documento); o gerente pode ver tudo:
-GRANT UNMASK TO rl_gerente;
+BEGIN TRY EXEC('GRANT UNMASK TO rl_gerente'); END TRY BEGIN CATCH PRINT 'UNMASK indisponivel nesta versao (ignorado).'; END CATCH;
 
 /* Exemplo de criação de usuários (ajuste as senhas antes de usar):
    CREATE LOGIN app_site WITH PASSWORD = '<senha-forte>';
@@ -391,19 +404,22 @@ GO
    ------------------------------------------------------------ */
 
 INSERT INTO TipoQuarto (Nome, Capacidade, PrecoDiaria, Acessivel, Descricao) VALUES
-(N'Quarto Brisa',      2, 260.00, 0, N'Cama de casal e varanda com rede'),
-(N'Quarto Coral',      3, 340.00, 0, N'Casal e solteiro, vista para o jardim'),
-(N'Suíte Família',     4, 450.00, 0, N'Duas camas de casal e mesa de refeições'),
-(N'Térreo Acessível',  2, 280.00, 1, N'Rampa, porta ampla e banheiro com barras de apoio');
+(N'Suíte Brisa',    3, 300.00, 0, N'3 suítes para até 3 hóspedes'),
+(N'Suíte Coral',    4, 380.00, 0, N'6 suítes para até 4 hóspedes'),
+(N'Suíte Palmeira', 5, 450.00, 0, N'5 suítes para até 5 hóspedes'),
+(N'Suíte Duo',      4, 400.00, 0, N'1 suíte para até 2 casais');
 
+-- 15 suítes: 3 Brisa, 6 Coral, 5 Palmeira e 1 Duo
 INSERT INTO Quarto (Numero, IdTipoQuarto) VALUES
-('101',1),('102',1),('201',2),('202',2),('203',3),('001',4);
+('101',1),('102',1),('103',1),
+('104',2),('105',2),('106',2),('107',2),('108',2),('109',2),
+('201',3),('202',3),('203',3),('204',3),('205',3),
+('206',4);
 
-INSERT INTO Comodidade (Nome) VALUES
-(N'Ar-condicionado'),(N'Wi-Fi'),(N'Frigobar'),(N'Varanda'),(N'Rampa de acesso'),(N'Banheiro adaptado');
+INSERT INTO Comodidade (Nome) VALUES (N'Wi-Fi'),(N'Café da manhã'),(N'Estacionamento');
 
 INSERT INTO TipoQuartoComodidade VALUES
-(1,1),(1,2),(1,4),(2,1),(2,2),(2,3),(3,1),(3,2),(4,2),(4,5),(4,6);
+(1,1),(1,2),(1,3),(2,1),(2,2),(2,3),(3,1),(3,2),(3,3),(4,1),(4,2),(4,3);
 
 /* ------------------------------------------------------------
    8. EXEMPLOS DE USO (rode após criar tudo)
@@ -417,3 +433,86 @@ INSERT INTO TipoQuartoComodidade VALUES
    SELECT * FROM vw_ReservasDetalhadas;
    SELECT * FROM LogReserva;
    ------------------------------------------------------------ */
+
+/* Complemento do banco para o site MVC. Rode depois do 01_banco.sql. */
+GO
+
+CREATE PROCEDURE sp_ListarTiposQuarto AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT t.IdTipoQuarto, t.Nome, t.Capacidade, t.PrecoDiaria, t.Acessivel, t.Descricao,
+           (SELECT STRING_AGG(c.Nome, ', ') FROM TipoQuartoComodidade x
+            JOIN Comodidade c ON c.IdComodidade = x.IdComodidade
+            WHERE x.IdTipoQuarto = t.IdTipoQuarto) AS Comodidades
+    FROM TipoQuarto t ORDER BY t.PrecoDiaria;
+END;
+GO
+CREATE PROCEDURE sp_ConsultarReserva @Codigo VARCHAR(10), @Email NVARCHAR(160) AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT v.Codigo, v.Tipo, v.DataEntrada, v.DataSaida, v.Noites, v.QtdHospedes, v.ValorTotal, v.ValorPago, v.Status
+    FROM vw_ReservasDetalhadas v
+    JOIN Reserva r ON r.IdReserva = v.IdReserva
+    JOIN Hospede h ON h.IdHospede = r.IdHospede
+    WHERE v.Codigo = @Codigo AND h.Email = @Email;
+END;
+GO
+-- O hóspede só cancela informando código e e-mail da própria reserva.
+CREATE PROCEDURE sp_CancelarReservaHospede @Codigo VARCHAR(10), @Email NVARCHAR(160), @Gratuito BIT OUTPUT AS
+BEGIN
+    SET NOCOUNT ON;
+    IF NOT EXISTS (SELECT 1 FROM Reserva r JOIN Hospede h ON h.IdHospede = r.IdHospede
+                   WHERE r.Codigo = @Codigo AND h.Email = @Email)
+        THROW 50006, 'Reserva não encontrada para este código e e-mail.', 1;
+    EXEC sp_CancelarReserva @Codigo, @Gratuito OUTPUT;
+END;
+GO
+CREATE PROCEDURE sp_RegistrarMensagem @Nome NVARCHAR(120), @Email NVARCHAR(160), @Texto NVARCHAR(1000) AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO MensagemContato (Nome, Email, Texto) VALUES (@Nome, @Email, @Texto);
+END;
+GO
+CREATE PROCEDURE sp_ObterAdmin @Login VARCHAR(40) AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT IdUsuario, Login, SenhaHash, Salt, Perfil FROM UsuarioAdmin WHERE Login = @Login AND Ativo = 1;
+END;
+GO
+CREATE PROCEDURE sp_CriarAdmin @Login VARCHAR(40), @Hash VARBINARY(64), @Salt VARBINARY(32), @Perfil VARCHAR(15) AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO UsuarioAdmin (Login, SenhaHash, Salt, Perfil) VALUES (@Login, @Hash, @Salt, @Perfil);
+END;
+GO
+/* Permissões: o site anônimo só executa o que precisa. */
+REVOKE EXECUTE ON sp_CancelarReserva FROM rl_site;
+GRANT EXECUTE ON sp_ListarTiposQuarto TO rl_site;
+GRANT EXECUTE ON sp_ConsultarReserva TO rl_site;
+GRANT EXECUTE ON sp_CancelarReservaHospede TO rl_site;
+GRANT EXECUTE ON sp_RegistrarMensagem TO rl_site;
+GRANT EXECUTE ON sp_ObterAdmin TO rl_site;
+GRANT EXECUTE ON sp_CancelarReserva TO rl_gerente;
+GRANT EXECUTE ON sp_CriarAdmin TO rl_gerente;
+GO
+
+/* ------------------------------------------------------------
+   USUÁRIOS DA APLICAÇÃO (senhas iguais às do appsettings.json; troque em produção)
+   Se o SQL Server aceitar só login do Windows, o CREATE LOGIN pode falhar:
+   nesse caso use Trusted_Connection=True no appsettings.json (veja o README).
+   ------------------------------------------------------------ */
+USE master;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = 'app_site')
+    CREATE LOGIN app_site  WITH PASSWORD = 'PimSite#2026',  CHECK_POLICY = OFF;
+IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = 'app_admin')
+    CREATE LOGIN app_admin WITH PASSWORD = 'PimAdmin#2026', CHECK_POLICY = OFF;
+GO
+USE PousadaMareMansa;
+GO
+CREATE USER app_site  FOR LOGIN app_site;
+CREATE USER app_admin FOR LOGIN app_admin;
+ALTER ROLE rl_site    ADD MEMBER app_site;
+ALTER ROLE rl_gerente ADD MEMBER app_admin;
+GO
+PRINT 'Banco PousadaMareMansa criado com sucesso.';

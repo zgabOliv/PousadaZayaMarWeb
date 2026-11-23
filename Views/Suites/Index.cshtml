@@ -1,0 +1,19 @@
+@model List<TipoQuarto>
+@{ ViewData["Title"] = "Suítes"; }
+<h1>Nossas suítes</h1>
+<p class="muted">São 15 suítes em @Model.Count tipos. Escolha uma para ver detalhes, avaliações e o calendário de disponibilidade.</p>
+<div class="grid">
+@foreach (var t in Model)
+{
+  <article class="card suite">
+    <a asp-action="Detalhe" asp-route-id="@t.IdTipoQuarto" class="foto" aria-label="Ver detalhes da suíte @t.Nome">
+      @if (!string.IsNullOrEmpty(t.Imagem)) { <img src="@t.Imagem" alt="Suíte @t.Nome" loading="lazy"> }
+      else { <span class="sem-foto" aria-hidden="true"><img src="~/img/logo-icone.png" alt="" width="64" height="64"></span> }
+    </a>
+    <h3><a asp-action="Detalhe" asp-route-id="@t.IdTipoQuarto">@t.Nome</a></h3>
+    <p class="muted">Até @t.Capacidade hóspedes. @t.Unidades unidade(s).</p>
+    <p class="price">@Fmt.Brl(t.PrecoDiaria) <small>por noite</small></p>
+    <a class="btn sec" asp-action="Detalhe" asp-route-id="@t.IdTipoQuarto">Ver detalhes</a>
+  </article>
+}
+</div>

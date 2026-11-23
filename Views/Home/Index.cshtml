@@ -1,25 +1,87 @@
-@model List<TipoQuarto>
-@{ ViewData["Title"] = "Início."; var hoje = DateTime.Today.ToString("yyyy-MM-dd"); }
+@model HomeViewModel
+@{ string Ni(decimal v) => v.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+   ViewData["Title"] = "Início"; ViewData["Cheio"] = true; var hoje = DateTime.Today.ToString("yyyy-MM-dd"); }
 <section class="hero">
-  <h1>Acorde com o som do mar.</h1>
-  <p>Pousada familiar no litoral paulista, a 3 minutos a pé da praia. Café da manhã incluso e atendimento direto com os donos.</p>
-  <form method="get" asp-controller="Reserva" asp-action="Buscar" class="book">
+  <div class="miolo">
+    <h1>Acorde com o som do mar.</h1>
+    <p>Pousada com 15 suítes para casais, famílias e grupos.</p>
+    <div class="selos"><span>Café da manhã incluso</span><span>Estacionamento</span><span>Wi-Fi</span></div>
+  </div>
+</section>
+<div class="busca">
+  <form method="get" asp-controller="Reserva" asp-action="Buscar" class="book" id="reservar">
     <label>Entrada<input type="date" name="Entrada" min="@hoje" required></label>
     <label>Saída<input type="date" name="Saida" min="@hoje" required></label>
-    <label>Hóspedes<select name="Hospedes"><option>1</option><option selected>2</option><option>3</option><option>4</option></select></label>
+    <label>Hóspedes<select name="Hospedes"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option></select></label>
     <button type="submit">Ver quartos disponíveis</button>
   </form>
-</section>
-<h2>Nossos quartos</h2>
+</div>
+<div class="conteudo">
+<div class="faixa">
+  <div><strong>Cancelamento grátis</strong><span>Até 7 dias antes da entrada</span></div>
+  <div><strong>Reserva sem complicação</strong><span>Com ou sem conta, em poucos passos</span></div>
+  <div><strong>Suítes para todos</strong><span>Brisa, Coral, Palmeira e Duo</span></div>
+</div>
+<h2 id="suites">Nossas suítes</h2>
 <div class="grid">
-@foreach (var t in Model)
+@foreach (var t in Model.Tipos)
 {
-  <article class="card">
-    <h3>@t.Nome</h3>
+  <article class="card suite">
+    <a asp-controller="Suites" asp-action="Detalhe" asp-route-id="@t.IdTipoQuarto" class="foto" aria-label="Ver detalhes da suíte @t.Nome">
+      @if (!string.IsNullOrEmpty(t.Imagem)) { <img src="@t.Imagem" alt="Suíte @t.Nome" loading="lazy"> }
+      else { <span class="sem-foto" aria-hidden="true"><img src="~/img/logo-icone.png" alt="" width="64" height="64"></span> }
+    </a>
+    <div class="corpo">
+    <h3><a asp-controller="Suites" asp-action="Detalhe" asp-route-id="@t.IdTipoQuarto">@t.Nome</a></h3>
+    @if (t.Media is { } m) { <p class="nota"><span aria-hidden="true">@Fmt.Estrelas(m)</span> <small>@Ni(m) (@t.TotalAvaliacoes)</small></p> }
     <p>@t.Descricao</p>
     <p class="muted">Até @t.Capacidade hóspedes. @t.Comodidades</p>
     @if (t.Acessivel) { <p><strong>Quarto acessível</strong></p> }
-    <p class="price">@t.PrecoDiaria.ToString("C") <small>por noite</small></p>
+    <p class="price">@Fmt.Brl(t.PrecoDiaria) <small>por noite</small></p>
+    <a class="btn sec" asp-controller="Suites" asp-action="Detalhe" asp-route-id="@t.IdTipoQuarto">Ver detalhes e datas</a>
+    </div>
   </article>
 }
+</div>
+
+@if (Model.Avaliacoes.Count > 0)
+{
+  <section class="avals" aria-labelledby="av-titulo">
+    <h2 id="av-titulo">O que dizem os hóspedes</h2>
+    @if (Model.Resumo.Media is { } mm) { <p class="muted">Nota média <strong>@Ni(mm)</strong> de 5, em @Model.Resumo.Total avaliação(ões).</p> }
+    <div class="grid">
+    @foreach (var a in Model.Avaliacoes)
+    {
+      <blockquote class="card"><p class="nota" aria-label="Nota @a.Nota de 5"><span aria-hidden="true">@Fmt.Estrelas(a.Nota)</span></p><p>@a.Comentario</p><footer>@a.Autor, suíte @a.Tipo</footer></blockquote>
+    }
+    </div>
+  </section>
+}
+
+<section class="cafe" aria-labelledby="cafe-titulo">
+  <h2 id="cafe-titulo">Café da manhã incluso</h2>
+  <p class="muted">Pães, frutas, frios, bolo, sucos, café e chá, servidos no salão com vista para a cidade e as montanhas. </p>
+  <div class="galeria">
+    <figure class="g-grande">
+      <a href="~/img/cafe-salao.jpg" target="_blank" rel="noopener"><img src="~/img/cafe-salao.jpg" width="1280" height="963" loading="lazy" alt="Salão do café da manhã com mesas de toalha branca, churrasqueira de tijolos e janelas amplas"></a>
+      <figcaption>O salão, com churrasqueira de tijolos e janelas amplas</figcaption>
+    </figure>
+    <figure>
+      <a href="~/img/cafe-vista.jpg" target="_blank" rel="noopener"><img src="~/img/cafe-vista.jpg" width="1280" height="963" loading="lazy" alt="Buffet de café da manhã diante da janela com vista para palmeiras, casas e montanhas"></a>
+      <figcaption>Vista da janela do salão</figcaption>
+    </figure>
+    <figure>
+      <a href="~/img/cafe-mesa-1.jpg" target="_blank" rel="noopener"><img src="~/img/cafe-mesa-1.jpg" width="1280" height="962" loading="lazy" alt="Mesa do café com bananas, mamão, pães, bolo, presunto, queijo e jarras de suco"></a>
+      <figcaption>Frutas, pães, bolo, frios e sucos</figcaption>
+    </figure>
+    <figure>
+      <a href="~/img/cafe-mesa-2.jpg" target="_blank" rel="noopener"><img src="~/img/cafe-mesa-2.jpg" width="963" height="1280" loading="lazy" alt="Mesa comprida do café com garrafas térmicas, jarras de suco, queijo, presunto e cestas de pão"></a>
+      <figcaption>Café, leite e sucos de frutas</figcaption>
+    </figure>
+    <figure>
+      <a href="~/img/cafe-mesa-3.jpg" target="_blank" rel="noopener"><img src="~/img/cafe-mesa-3.jpg" width="963" height="1280" loading="lazy" alt="Mesa do café com pães, frios, queijo, achocolatado, chá, xícaras e hóspedes ao fundo"></a>
+      <figcaption>Xícaras, chá, achocolatado e pães quentinhos</figcaption>
+    </figure>
+  </div>
+</section>
 </div>

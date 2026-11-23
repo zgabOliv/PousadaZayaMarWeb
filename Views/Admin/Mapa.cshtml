@@ -1,0 +1,24 @@
+@model List<QuartoMapa>
+@{ ViewData["Title"] = "Mapa de ocupação"; var d = (DateTime)ViewBag.Data;
+   string Cls(string s) => s switch { "Livre" => "livre", "Hospedado" => "hosp", "Pendente" => "pend", "Saiu" => "saiu", _ => "res" }; }
+<partial name="_AdminMenu" />
+<h1>Mapa de ocupação, @Fmt.Data(d)</h1>
+<form method="get" class="book">
+  <label>Dia<input type="date" name="data" value="@d.ToString("yyyy-MM-dd")"></label>
+  <button type="submit">Ver</button>
+  <a class="btn sec" asp-action="Mapa" asp-route-data="@d.AddDays(-1).ToString("yyyy-MM-dd")">&larr; Dia anterior</a>
+  <a class="btn sec" asp-action="Mapa" asp-route-data="@d.AddDays(1).ToString("yyyy-MM-dd")">Próximo dia &rarr;</a>
+</form>
+<p class="muted legenda"><span class="sw livre"></span> livre <span class="sw res"></span> reservado <span class="sw pend"></span> aguardando pagamento <span class="sw hosp"></span> hospedado <span class="sw saiu"></span> já saiu.
+  Ocupados: @Model.Count(q => q.Situacao != "Livre") de @Model.Count.</p>
+<div class="mapa">
+@foreach (var q in Model)
+{
+  <article class="quarto @Cls(q.Situacao)">
+    <h3>@q.Quarto</h3>
+    <p class="tipo">@q.Tipo, até @q.Capacidade</p>
+    <p><strong>@q.Situacao</strong></p>
+    @if (q.Codigo is not null) { <p>@q.Hospede<br><small>@q.Codigo, @Fmt.Data(q.DataEntrada!.Value) a @Fmt.Data(q.DataSaida!.Value)</small></p> }
+  </article>
+}
+</div>

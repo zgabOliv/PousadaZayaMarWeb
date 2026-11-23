@@ -1,0 +1,25 @@
+@model List<TipoQuarto>
+@{ ViewData["Title"] = "Suítes e tarifas"; var quartos = (List<QuartoAdmin>)ViewBag.Quartos; }
+<partial name="_AdminMenu" />
+<h1>Suítes e tarifas</h1>
+<p><a class="btn" asp-action="TipoEditar">Novo tipo de suíte</a> <a class="btn sec" asp-action="QuartoEditar">Novo quarto</a></p>
+<div class="scroll"><table>
+  <thead><tr><th>Suíte</th><th>Capacidade</th><th>Diária</th><th>Quartos</th><th>Comodidades</th><th></th></tr></thead>
+  <tbody>
+  @foreach (var t in Model)
+  {
+    <tr><td>@t.Nome @if (t.Acessivel) { <small>(acessível)</small> }</td><td>@t.Capacidade</td><td>@Fmt.Brl(t.PrecoDiaria)</td><td>@t.Unidades</td><td>@t.Comodidades</td>
+        <td><a asp-action="TipoEditar" asp-route-id="@t.IdTipoQuarto">Editar</a></td></tr>
+  }
+  </tbody>
+</table></div>
+<h2>Quartos</h2>
+<div class="scroll"><table>
+  <thead><tr><th>Número</th><th>Tipo</th><th>Situação</th><th></th></tr></thead>
+  <tbody>
+  @foreach (var q in quartos)
+  {
+    <tr><td>@q.Numero</td><td>@q.Tipo</td><td>@(q.Ativo ? "Ativo" : "Desativado")</td><td><a asp-action="QuartoEditar" asp-route-id="@q.IdQuarto">Editar</a></td></tr>
+  }
+  </tbody>
+</table></div>

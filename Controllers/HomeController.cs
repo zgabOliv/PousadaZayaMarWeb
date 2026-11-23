@@ -7,9 +7,17 @@ namespace PousadaMareMansa.Web.Controllers;
 public class HomeController : Controller
 {
     private readonly PousadaRepository _repo;
-    public HomeController(PousadaRepository repo) => _repo = repo;
+    private readonly ContaRepository _conta;
+    public HomeController(PousadaRepository repo, ContaRepository conta) { _repo = repo; _conta = conta; }
 
-    public async Task<IActionResult> Index() => View(await _repo.ListarTiposAsync());
+    public async Task<IActionResult> Index() => View(new HomeViewModel
+    {
+        Tipos = await _repo.ListarTiposAsync(),
+        Avaliacoes = await _conta.ListarAvaliacoesAsync(null, 3),
+        Resumo = await _conta.ResumoAvaliacoesAsync(null)
+    });
+
+    public IActionResult Regras() => View();
 
     [HttpGet] public IActionResult Contato() => View(new ContatoModel());
 

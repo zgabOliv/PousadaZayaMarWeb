@@ -1,0 +1,73 @@
+@model DetalheSuiteViewModel
+@{
+  var t = Model.Tipo;
+  ViewData["Title"] = "Suíte " + t.Nome;
+  var hoje = DateTime.Today;
+  var mesAnt = Model.Mes.AddMonths(-1); var mesProx = Model.Mes.AddMonths(1);
+  var atual = new DateTime(hoje.Year, hoje.Month, 1);
+  var offset = (int)Model.Mes.DayOfWeek;   // domingo = 0
+  var nomesDia = new[] { "dom", "seg", "ter", "qua", "qui", "sex", "sáb" };
+  string Ni(decimal v) => v.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+}
+<p><a asp-action="Index">&larr; Todas as suítes</a></p>
+<h1>Suíte @t.Nome</h1>
+<div class="detalhe">
+  <div class="foto-grande">
+    @if (!string.IsNullOrEmpty(t.Imagem)) { <img src="@t.Imagem" alt="Suíte @t.Nome"> }
+    else { <span class="sem-foto" aria-hidden="true"><img src="~/img/logo-icone.png" alt="" width="96" height="96"></span> }
+  </div>
+  <div>
+    @if (t.Media is { } m) { <p class="nota"><span aria-hidden="true">@Fmt.Estrelas(m)</span> <strong>@Ni(m)</strong> <small>(@t.TotalAvaliacoes avaliação(ões))</small></p> }
+    <p>@t.Descricao</p>
+    <ul class="lista">
+      <li>Até <strong>@t.Capacidade</strong> hóspedes</li>
+      <li>@t.Unidades suíte(s) deste tipo</li>
+      @if (t.Acessivel) { <li><strong>Quarto acessível</strong></li> }
+      @foreach (var c in (t.Comodidades ?? "").Split(", ", StringSplitOptions.RemoveEmptyEntries)) { <li>@c</li> }
+    </ul>
+    <p class="price">@Fmt.Brl(t.PrecoDiaria) <small>por noite</small></p>
+    <p class="muted">Check-out até 12h. Cancelamento gratuito até 7 dias antes. <a asp-controller="Home" asp-action="Regras">Ver regras</a>.</p>
+  </div>
+</div>
+
+<h2>Disponibilidade em @Fmt.Mes(Model.Mes)</h2>
+<nav class="meses" aria-label="Navegar entre meses">
+  @if (Model.Mes > atual) { <a class="btn sec mini" asp-action="Detalhe" asp-route-id="@t.IdTipoQuarto" asp-route-mes="@mesAnt.ToString("yyyy-MM")">&larr; Mês anterior</a> }
+  <a class="btn sec mini" asp-action="Detalhe" asp-route-id="@t.IdTipoQuarto" asp-route-mes="@mesProx.ToString("yyyy-MM")">Próximo mês &rarr;</a>
+</nav>
+<table class="cal" aria-label="Calendário de disponibilidade">
+  <thead><tr>@foreach (var n in nomesDia) { <th scope="col">@n</th> }</tr></thead>
+  <tbody>
+  <tr>
+  @for (var i = 0; i < offset; i++) { <td class="vazio"></td> }
+  @{ var col = offset; }
+  @foreach (var d in Model.Dias)
+  {
+    if (col == 7) { col = 0; @:</tr><tr>
+    }
+    var passado = d.Dia < hoje;
+    var cls = passado ? "passado" : d.Livres <= 0 ? "lotado" : d.Livres <= 1 ? "poucas" : "livre";
+    var txt = passado ? "dia passado" : d.Livres <= 0 ? "sem vagas" : d.Livres + " livre(s)";
+    <td class="@cls" title="@txt"><span class="dia">@d.Dia.Day</span><span class="vagas">@(passado ? "" : d.Livres <= 0 ? "lotado" : d.Livres.ToString())</span><span class="sr">@txt</span></td>
+    col++;
+  }
+  </tr>
+  </tbody>
+</table>
+<p class="muted legenda"><span class="sw livre"></span> livre <span class="sw poucas"></span> última suíte <span class="sw lotado"></span> lotado. O número é a quantidade de suítes livres naquela noite.</p>
+
+<form method="get" asp-controller="Reserva" asp-action="Buscar" class="book" id="reservar">
+  <label>Entrada<input type="date" name="Entrada" min="@hoje.ToString("yyyy-MM-dd")" required></label>
+  <label>Saída<input type="date" name="Saida" min="@hoje.ToString("yyyy-MM-dd")" required></label>
+  <label>Hóspedes<input type="number" name="Hospedes" min="1" max="@t.Capacidade" value="@Math.Min((int)t.Capacidade, 2)"></label>
+  <button type="submit">Ver disponibilidade e reservar</button>
+</form>
+
+<h2>Avaliações desta suíte</h2>
+@if (Model.Avaliacoes.Count == 0) { <p class="muted">Ainda não há comentários para esta suíte.</p> }
+<div class="grid">
+@foreach (var a in Model.Avaliacoes)
+{
+  <blockquote class="card"><p class="nota" aria-label="Nota @a.Nota de 5"><span aria-hidden="true">@Fmt.Estrelas(a.Nota)</span></p><p>@a.Comentario</p><footer>@a.Autor, @Fmt.Data(a.DataAval)</footer></blockquote>
+}
+</div>

@@ -1,0 +1,13 @@
+@model EntrarModel
+@{ ViewData["Title"] = "Entrar"; }
+<h1>Entrar</h1>
+<p class="muted">Ainda não tem conta? <a asp-action="Cadastro">Criar conta</a>.</p>
+<form asp-action="Entrar" method="post" class="stack">
+  <div asp-validation-summary="All" class="err"></div>
+  <input type="hidden" asp-for="ReturnUrl">
+  <label>E-mail<input asp-for="Email" type="email" autocomplete="email"></label>
+  <label>Senha<input asp-for="Senha" type="password" autocomplete="current-password"></label>
+  <button type="submit">Entrar</button>
+  <a asp-action="Esqueci">Esqueci minha senha</a>
+</form>
+<p class="muted">É da equipe da pousada? <a asp-controller="Admin" asp-action="Login">Acesse o painel da equipe</a>.</p>

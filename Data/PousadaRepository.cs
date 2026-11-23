@@ -15,17 +15,7 @@ public class PousadaRepository
         await using var c = _db.Site(); await c.OpenAsync();
         await using var cmd = Db.Proc(c, "sp_ListarTiposQuarto");
         await using var r = await cmd.ExecuteReaderAsync();
-        while (await r.ReadAsync())
-            lista.Add(new TipoQuarto
-            {
-                IdTipoQuarto = r.GetInt32(r.GetOrdinal("IdTipoQuarto")),
-                Nome = r.GetString(r.GetOrdinal("Nome")),
-                Capacidade = r.GetByte(r.GetOrdinal("Capacidade")),
-                PrecoDiaria = r.GetDecimal(r.GetOrdinal("PrecoDiaria")),
-                Acessivel = r.GetBoolean(r.GetOrdinal("Acessivel")),
-                Descricao = r["Descricao"] as string,
-                Comodidades = r["Comodidades"] as string
-            });
+        while (await r.ReadAsync()) lista.Add(TipoQuartoReader.Ler(r));
         return lista;
     }
 

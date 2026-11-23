@@ -2,12 +2,17 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using PousadaMareMansa.Web.Data;
 using PousadaMareMansa.Web.Models;
+using PousadaMareMansa.Web.Services;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
 namespace PousadaMareMansa.Web.Controllers;
 
 public class ReservaController : Controller
 {
     private readonly PousadaRepository _repo;
-    public ReservaController(PousadaRepository repo) => _repo = repo;
+    private readonly ContaRepository _conta;
+    private readonly ContaService _contaSvc;
+    public ReservaController(PousadaRepository repo, ContaRepository conta, ContaService contaSvc) { _repo = repo; _conta = conta; _contaSvc = contaSvc; }
 
     // Erros 50000+ vêm das regras da procedure (THROW) e têm mensagem segura para o usuário.
     private void AddErro(SqlException ex) =>
@@ -28,7 +33,16 @@ public class ReservaController : Controller
     }
 
     [HttpGet]
-    public IActionResult Reservar(ReservaInput m) { ModelState.Clear(); return View(m); }
+    public async Task<IActionResult> Reservar(ReservaInput m)
+    {
+        ModelState.Clear();
+        // Hóspede logado: já preenche nome, e-mail e telefone.
+        var auth = await HttpContext.AuthenticateAsync(ContaController.Esquema);
+        if (auth.Succeeded && int.TryParse(auth.Principal!.FindFirstValue(ClaimTypes.NameIdentifier), out var id)
+            && await _conta.PerfilAsync(id) is { } p)
+        { m.Nome = p.Nome; m.Email = p.Email; m.Telefone = p.Telefone ?? ""; }
+        return View(m);
+    }
 
     [HttpPost, ActionName("Reservar")]
     public async Task<IActionResult> ReservarPost(ReservaInput m)
@@ -37,6 +51,7 @@ public class ReservaController : Controller
         try
         {
             var codigo = await _repo.CriarReservaAsync(m);
+            try { await _contaSvc.EnviarReservaAsync(m.Email.Trim().ToLowerInvariant(), m.Nome.Trim(), codigo); } catch { /* e-mail não pode derrubar a reserva */ }
             return RedirectToAction(nameof(Confirmacao), new { codigo });
         }
         catch (SqlException ex) { AddErro(ex); return View(m); }

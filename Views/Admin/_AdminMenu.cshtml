@@ -1,0 +1,16 @@
+@{ var acao = ViewContext.RouteData.Values["action"]?.ToString() ?? ""; bool Ger = User.IsInRole("Gerente");
+   string A(params string[] n) => n.Contains(acao) ? "ativo" : ""; }
+<nav class="painel-menu" aria-label="Painel da equipe">
+  <a class="@A("Index")" asp-action="Index">Hoje</a>
+  <a class="@A("Reservas","NovaReserva")" asp-action="Reservas">Reservas</a>
+  <a class="@A("Mapa")" asp-action="Mapa">Mapa de ocupação</a>
+  <a class="@A("Hospedes")" asp-action="Hospedes">Hóspedes</a>
+  <a class="@A("Mensagens")" asp-action="Mensagens">Mensagens</a>
+  @if (Ger)
+  {
+    <a class="@A("Suites","TipoEditar","QuartoEditar")" asp-action="Suites">Suítes e tarifas</a>
+    <a class="@A("Relatorios")" asp-action="Relatorios">Relatórios</a>
+    <a class="@A("Usuarios")" asp-action="Usuarios">Usuários</a>
+  }
+  <span class="quem">@User.Identity?.Name (@(Ger ? "Gerente" : "Recepção"))</span>
+</nav>

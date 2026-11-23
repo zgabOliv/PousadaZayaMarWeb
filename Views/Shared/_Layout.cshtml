@@ -1,32 +1,69 @@
+@{ var ctrl = ViewContext.RouteData.Values["controller"]?.ToString() ?? ""; var acao = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+   string At(string c, string a = "") => ctrl == c && (a == "" || acao == a) ? "atual" : "";
+   bool cheio = ViewData["Cheio"] as bool? == true; }
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>@ViewData["Title"] - Pousada Maré Mansa</title>
+<title>@ViewData["Title"] - Zaya Mar Pousada</title>
+<link rel="icon" type="image/png" href="~/img/logo-icone.png">
+<link rel="apple-touch-icon" href="~/img/logo-icone.png">
 <link rel="stylesheet" href="~/css/site.css" asp-append-version="true">
 </head>
 <body>
 <a class="skip" href="#main">Ir para o conteúdo</a>
 <header>
-  <strong>Pousada Maré Mansa</strong>
-  <nav aria-label="Principal">
-    <a asp-controller="Home" asp-action="Index">Início</a>
-    <a asp-controller="Reserva" asp-action="Consultar">Minha reserva</a>
-    <a asp-controller="Home" asp-action="Contato">Contato</a>
-    @if (User.Identity?.IsAuthenticated == true)
-    {
-      <a asp-controller="Admin" asp-action="Index">Painel</a>
-      <form asp-controller="Admin" asp-action="Logout" method="post" class="inline"><button class="link">Sair</button></form>
-    }
-  </nav>
+  <div class="topo">
+    <a class="marca" asp-controller="Home" asp-action="Index" aria-label="Zaya Mar Pousada, página inicial"><img src="~/img/logo-icone.png" alt="" width="42" height="42"><span>ZAYA MAR<small>POUSADA</small></span></a>
+    <nav class="principal" aria-label="Principal">
+      <a class="@At("Suites")" asp-controller="Suites" asp-action="Index">Suítes</a>
+      <a class="@At("Home", "Regras")" asp-controller="Home" asp-action="Regras">Regras</a>
+      <a class="@At("Home", "Contato")" asp-controller="Home" asp-action="Contato">Contato</a>
+      @if (User.Identity?.IsAuthenticated == true)
+      {
+        <a class="@At("Admin")" asp-controller="Admin" asp-action="Index">Painel da equipe</a>
+        <form asp-controller="Admin" asp-action="Logout" method="post" class="inline"><button class="link">Sair</button></form>
+      }
+      else if (Context.Items["HospedeNome"] is string hn)
+      {
+        <a class="@At("Conta")" asp-controller="Conta" asp-action="MinhasReservas">Minhas reservas</a>
+        <form asp-controller="Conta" asp-action="Sair" method="post" class="inline"><button class="link" title="Sair de @hn">Sair</button></form>
+      }
+      else
+      {
+        <a class="@At("Conta", "Entrar")" asp-controller="Conta" asp-action="Entrar">Entrar</a>
+        <a class="@At("Admin")" asp-controller="Admin" asp-action="Login">Equipe</a>
+      }
+      <a class="btn" asp-controller="Home" asp-action="Index" asp-fragment="reservar">Reservar</a>
+    </nav>
+  </div>
 </header>
-<main id="main">
+<main id="main" class="@(cheio ? "cheio" : "")">
+  @if (cheio) { @:<div class="conteudo">
+  }
   @if (TempData["Ok"] is string ok) { <p class="ok" role="status">@ok</p> }
   @if (TempData["Erro"] is string er) { <p class="err" role="alert">@er</p> }
+  @if (TempData["Link"] is string lk) { <p class="demo" role="status">Modo demonstração (e-mail não enviado): <a href="@lk">abrir o link</a></p> }
+  @if (cheio) { @:</div>
+  }
   @RenderBody()
 </main>
-<footer>© 2026 Pousada Maré Mansa. Projeto acadêmico do PIM IV, UNIP. Empresa e dados fictícios.
-  <a asp-controller="Admin" asp-action="Login">Área administrativa</a></footer>
+<footer>
+  <div class="rodape">
+    <div><h2>Zaya Mar Pousada</h2><p>15 suítes com café da manhã, estacionamento e Wi-Fi.</p></div>
+    <div><h2>Hóspedes</h2><ul>
+      <li><a asp-controller="Conta" asp-action="Entrar">Entrar ou criar conta</a></li>
+      <li><a asp-controller="Reserva" asp-action="Consultar">Consultar reserva pelo código</a></li>
+      <li><a asp-controller="Home" asp-action="Regras">Regras e cancelamento</a></li>
+    </ul></div>
+    <div><h2>Mais</h2><ul>
+      <li><a href="/app/">App no navegador</a></li>
+      <li><a asp-controller="Home" asp-action="Contato">Fale com a gente</a></li>
+      <li><a asp-controller="Admin" asp-action="Login">Área da equipe</a></li>
+    </ul></div>
+    <p class="fim">© 2026 Zaya Mar Pousada. Projeto acadêmico do PIM IV, UNIP. Empresa e dados fictícios.</p>
+  </div>
+</footer>
 </body>
 </html>

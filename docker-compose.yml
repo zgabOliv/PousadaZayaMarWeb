@@ -1,0 +1,34 @@
+# Sobe o ambiente completo: banco SQL Server + criação do banco + site/API.
+# Uso: docker compose up --build   (site em http://localhost:8080 e Swagger em /swagger)
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${SA_PASSWORD:-Pim#Sa2026Forte}"
+    ports: ["1433:1433"]
+    volumes: ["dbdata:/var/opt/mssql"]
+
+  db-init:            # roda o script do banco quando o SQL Server estiver pronto
+    image: mcr.microsoft.com/mssql-tools
+    depends_on: [db]
+    volumes: ["./Database:/scripts:ro"]
+    environment:
+      SA_PASSWORD: "${SA_PASSWORD:-Pim#Sa2026Forte}"
+    entrypoint: ["/bin/bash", "-c", "for i in $$(seq 1 30); do /opt/mssql-tools/bin/sqlcmd -S db -U sa -P \"$$SA_PASSWORD\" -f 65001 -b -i /scripts/00_criar_banco_completo.sql && exit 0; echo 'aguardando o banco...'; sleep 4; done; exit 1"]
+    restart: "no"
+
+  web:
+    build: .
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    ports: ["8080:8080"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ConnectionStrings__Site: "Server=db;Database=PousadaMareMansa;User Id=app_site;Password=PimSite#2026;Encrypt=False;TrustServerCertificate=True"
+      ConnectionStrings__Admin: "Server=db;Database=PousadaMareMansa;User Id=app_admin;Password=PimAdmin#2026;Encrypt=False;TrustServerCertificate=True"
+      Jwt__Key: "${JWT_KEY:-troque-esta-chave-com-no-minimo-32-caracteres-123}"
+
+volumes:
+  dbdata:

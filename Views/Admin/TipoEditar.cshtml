@@ -1,0 +1,17 @@
+@model TipoEdicao
+@{ ViewData["Title"] = "Suíte"; }
+<partial name="_AdminMenu" />
+<h1>@(Model.IdTipoQuarto is null ? "Novo tipo de suíte" : "Editar suíte")</h1>
+<form asp-action="TipoEditar" method="post" class="stack">
+  <div asp-validation-summary="All" class="err"></div>
+  <input type="hidden" asp-for="IdTipoQuarto">
+  <label>Nome<input asp-for="Nome"></label>
+  <label>Capacidade (hóspedes)<input asp-for="Capacidade" type="number" min="1" max="8"></label>
+  <label>Diária (R$)<input asp-for="PrecoDiaria" type="number" step="0.01" min="0.01"></label>
+  <label class="radio"><input asp-for="Acessivel" type="checkbox"> Quarto acessível</label>
+  <label>Descrição<textarea asp-for="Descricao" rows="3" maxlength="300"></textarea></label>
+  <label>Comodidades (separadas por vírgula)<input asp-for="Comodidades" placeholder="Wi-Fi, Café da manhã, Estacionamento"></label>
+  <label>Foto (caminho, ex.: /img/suites/brisa.jpg)<input asp-for="Imagem"></label>
+  <p class="muted">Mudar a diária vale só para reservas novas; as que já existem mantêm o valor combinado.</p>
+  <button type="submit">Salvar</button>
+</form>

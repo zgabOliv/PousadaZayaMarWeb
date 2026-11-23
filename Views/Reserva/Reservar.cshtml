@@ -1,7 +1,7 @@
 @model ReservaInput
 @{ ViewData["Title"] = "Reservar"; }
 <h1>Seus dados</h1>
-<p class="muted">Período: @Model.Entrada.ToString("dd/MM/yyyy") a @Model.Saida.ToString("dd/MM/yyyy"), @Model.Hospedes hóspede(s).</p>
+<p class="muted">Período: @Fmt.Data(Model.Entrada) a @Fmt.Data(Model.Saida), @Model.Hospedes hóspede(s).</p>
 <form asp-action="Reservar" method="post" class="stack">
   <div asp-validation-summary="All" class="err"></div>
   <input type="hidden" asp-for="IdTipoQuarto">

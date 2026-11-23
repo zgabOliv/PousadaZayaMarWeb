@@ -1,0 +1,45 @@
+### Testes da API (Visual Studio 2022: abra este arquivo e clique em "Enviar solicitação")
+@host = http://localhost:5000
+
+### 1. Listar quartos (público)
+GET {{host}}/api/v1/quartos
+
+### 2. Disponibilidade (público)
+GET {{host}}/api/v1/quartos/disponibilidade?entrada=2026-12-20&saida=2026-12-23&hospedes=2
+
+### 3. Criar reserva (público)
+POST {{host}}/api/v1/reservas
+Content-Type: application/json
+
+{
+  "idTipoQuarto": 1,
+  "entrada": "2026-12-20",
+  "saida": "2026-12-23",
+  "hospedes": 2,
+  "nome": "Camila Ribeiro",
+  "email": "camila@email.com",
+  "telefone": "13988887777"
+}
+
+### 4. Consultar reserva (troque o código)
+POST {{host}}/api/v1/reservas/consulta
+Content-Type: application/json
+
+{ "codigo": "MM-XXXXX", "email": "camila@email.com" }
+
+### 5. Login do administrador (copie o token da resposta)
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{ "login": "gerente", "senha": "SuaSenha" }
+
+### 6. Listar reservas (admin: cole o token abaixo)
+GET {{host}}/api/v1/admin/reservas
+Authorization: Bearer COLE_O_TOKEN_AQUI
+
+### 7. Registrar pagamento (admin)
+POST {{host}}/api/v1/admin/reservas/MM-XXXXX/pagamentos
+Authorization: Bearer COLE_O_TOKEN_AQUI
+Content-Type: application/json
+
+{ "valor": 780.00, "forma": "Pix" }

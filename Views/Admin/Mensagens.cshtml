@@ -1,0 +1,19 @@
+@model List<MensagemAdmin>
+@{ ViewData["Title"] = "Mensagens"; }
+<partial name="_AdminMenu" />
+<h1>Mensagens de contato</h1>
+@if (Model.Count == 0) { <p class="muted">Nenhuma mensagem recebida.</p> }
+<div class="grid">
+@foreach (var m in Model)
+{
+  <article class="card">
+    <p><strong>@m.Nome</strong> <small class="muted">@m.Email, @Fmt.Data(m.DataEnvio)</small></p>
+    <p>@m.Texto</p>
+    <form asp-action="MarcarMensagem" method="post">
+      <input type="hidden" name="id" value="@m.IdMensagem"><input type="hidden" name="respondida" value="@((!m.Respondida).ToString().ToLowerInvariant())">
+      <a class="btn sec mini" href="mailto:@m.Email">Responder por e-mail</a>
+      <button type="submit" class="@(m.Respondida ? "sec" : "")">@(m.Respondida ? "Marcar como não respondida" : "Marcar como respondida")</button>
+    </form>
+  </article>
+}
+</div>

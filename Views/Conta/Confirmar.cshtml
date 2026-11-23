@@ -1,0 +1,8 @@
+@model string
+@{ ViewData["Title"] = "Confirmar e-mail"; }
+<h1>Confirmar e-mail</h1>
+<p>Clique no botão para confirmar o seu e-mail.</p>
+<form asp-action="ConfirmarPost" method="post">
+  <input type="hidden" name="token" value="@Model">
+  <button type="submit">Confirmar e-mail</button>
+</form>

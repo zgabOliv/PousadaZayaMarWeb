@@ -11,8 +11,8 @@
 {
   <section class="card">
     <h2>@r.Tipo</h2>
-    <p>@r.DataEntrada.ToString("dd/MM/yyyy") a @r.DataSaida.ToString("dd/MM/yyyy") (@r.Noites noite(s)), @r.QtdHospedes hóspede(s)</p>
-    <p>Total @r.ValorTotal.ToString("C"). Pago @r.ValorPago.ToString("C"). Situação: <strong>@r.Status</strong></p>
+    <p>@Fmt.Data(r.DataEntrada) a @Fmt.Data(r.DataSaida) (@r.Noites noite(s)), @r.QtdHospedes hóspede(s)</p>
+    <p>Total @Fmt.Brl(r.ValorTotal). Pago @Fmt.Brl(r.ValorPago). Situação: <strong>@r.Status</strong></p>
     @if (r.Status is "Pendente" or "Confirmada")
     {
       <form asp-action="Cancelar" method="post">

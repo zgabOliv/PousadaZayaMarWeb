@@ -10,6 +10,10 @@ public class TipoQuarto
     public bool Acessivel { get; set; }
     public string? Descricao { get; set; }
     public string? Comodidades { get; set; }
+    public string? Imagem { get; set; }
+    public int Unidades { get; set; }
+    public decimal? Media { get; set; }
+    public int TotalAvaliacoes { get; set; }
 }
 
 public class Disponibilidade
@@ -100,4 +104,6 @@ public class ReservaAdmin
     public decimal ValorTotal { get; set; }
     public decimal ValorPago { get; set; }
     public string Status { get; set; } = "";
+    public DateTime? CheckInEm { get; set; }
+    public DateTime? CheckOutEm { get; set; }
 }

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#022c16">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Zaya Mar</title>
+<style>
+:root{--bg:#f5f8f3;--card:#fff;--ink:#10281a;--muted:#4a6355;--sea:#022c16;--sun:#d97000;--line:#d6e1d6;--bad:#b3261e;--glass:#a9c7a0}
+@media (prefers-color-scheme:dark){:root{--bg:#08170f;--card:#10281a;--ink:#e8f1e6;--muted:#a3bba9;--sea:#04200f;--line:#24402e;--bad:#ffb4ab}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,"Segoe UI",sans-serif;padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
+header{background:var(--sea);color:#f5f8f3;padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px}
+h1{margin:0;font-size:1.25rem}
+main{padding:16px;max-width:560px;margin:0 auto;outline:none}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;display:flex;flex-direction:column;gap:10px}
+.card h2{margin:0;font-size:1.05rem}
+.card p{margin:0}
+label{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:.9rem}
+input,select,textarea{font:inherit;padding:12px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);width:100%}
+button{font:inherit;font-weight:700;min-height:44px;border:0;border-radius:10px;padding:10px 16px;background:var(--sun);color:#10281a;cursor:pointer}
+button.sec{background:transparent;border:1.5px solid var(--line);color:var(--ink)}
+button.danger{background:var(--bad);color:#fff}
+#tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+#tabs button{flex:1;background:none;color:var(--muted);border-radius:0;font-size:.8rem;min-height:56px;padding:6px}
+#tabs button[aria-current=true]{color:var(--ink);box-shadow:inset 0 3px 0 var(--sun)}
+.ok{background:var(--glass);color:#10281a;padding:10px 14px;border-radius:10px}
+.err{color:var(--bad);font-weight:600}
+.muted{color:var(--muted)}
+.price{font-weight:800;font-size:1.2rem}
+#offline{background:var(--sun);color:#10281a;text-align:center;padding:6px;font-size:.85rem}
+:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+</style>
+</head>
+<body>
+<div id="offline" role="status" hidden>Sem conexão. Mostrando os dados salvos neste aparelho.</div>
+<header><h1 id="titulo">Zaya Mar</h1></header>
+<main id="tela" tabindex="-1"></main>
+<nav id="tabs" aria-label="Principal">
+  <button data-t="quartos">Quartos</button>
+  <button data-t="reservas">Reservas</button>
+  <button data-t="contato">Contato</button>
+  <button data-t="recepcao">Recepção</button>
+</nav>
+<script>
+const API = '/api/v1';
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const brl = v => Number(v).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+const dmy = s => String(s).slice(0, 10).split('-').reverse().join('/');
+const ls = {
+  get: (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
+  set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+const S = {tela:'quartos', tipos:ls.get('tipos', []), res:null, sel:null, busca:{entrada:'', saida:'', hospedes:2}, adm:null, codigoNovo:'', msg:'', err:''};
+const TITULOS = {quartos:'Quartos', reservar:'Sua reserva', confirmado:'Reserva feita', reservas:'Minhas reservas', contato:'Contato', recepcao:'Recepção'};
+const aba = () => ({reservar:'quartos', confirmado:'reservas'}[S.tela] || S.tela);
+
+// ---------- integração com a API REST ----------
+async function api(path, {method='GET', body, auth} = {}) {
+  const h = {'Content-Type':'application/json'};
+  if (auth) { const t = sessionStorage.getItem('jwt'); if (t) h.Authorization = 'Bearer ' + t; }
+  let r;
+  try { r = await fetch(API + path, {method, headers:h, body: body ? JSON.stringify(body) : undefined}); }
+  catch { const e = new Error('Sem conexão com o servidor.'); e.rede = true; throw e; }
+  if (r.status === 204) return null;
+  let d = null; try { d = await r.json(); } catch {}
+  if (!r.ok) {
+    const msg = d?.errors ? Object.values(d.errors).flat().join(' ') : (d?.detail || d?.title || 'Erro ' + r.status);
+    const e = new Error(msg); e.status = r.status; throw e;
+  }
+  return d;
+}
+
+// ---------- telas ----------
+const quartoCard = (t, extra = '') => `<article class="card"><h2>${esc(t.nome)}</h2>
+  ${t.descricao ? `<p>${esc(t.descricao)}</p>` : ''}
+  <p class="muted">Até ${t.capacidade} hóspedes${t.comodidades ? '. ' + esc(t.comodidades) : ''}</p>${extra}</article>`;
+
+const T = {
+  quartos() {
+    const b = S.busca, hoje = new Date().toISOString().slice(0, 10);
+    const noites = b.entrada && b.saida ? Math.round((new Date(b.saida) - new Date(b.entrada)) / 864e5) : 0;
+    const form = `<form data-f="buscar" class="card">
+      <label>Entrada<input type="date" name="entrada" min="${hoje}" value="${esc(b.entrada)}" required></label>
+      <label>Saída<input type="date" name="saida" min="${hoje}" value="${esc(b.saida)}" required></label>
+      <label>Hóspedes<select name="hospedes">${[1,2,3,4,5].map(n => `<option ${n == b.hospedes ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+      <button>Ver disponibilidade</button></form>`;
+    if (S.res) return form + S.res.map((q, i) => `<article class="card"><h2>${esc(q.nome)}</h2>
+      <p class="muted">Até ${q.capacidade} hóspedes. ${q.quartosLivres} disponível(is).</p>
+      <p class="price">${brl(q.valorTotal)} <small class="muted">por ${noites} noite(s)</small></p>
+      <button data-a="reservar" data-i="${i}">Reservar</button></article>`).join('');
+    return form + S.tipos.map(t => quartoCard(t, `<p class="price">${brl(t.precoDiaria)} <small class="muted">por noite</small></p>`)).join('');
+  },
+  reservar() {
+    const b = S.busca, q = S.sel;
+    return `<form data-f="reservar" class="card"><h2>${esc(q.nome)}</h2>
+      <p>${dmy(b.entrada)} a ${dmy(b.saida)}, ${b.hospedes} hóspede(s). Total ${brl(q.valorTotal)}.</p>
+      <label>Nome completo<input name="nome" autocomplete="name" required minlength="3"></label>
+      <label>E-mail<input name="email" type="email" autocomplete="email" required></label>
+      <label>WhatsApp<input name="telefone" inputmode="tel" autocomplete="tel" required placeholder="(13) 99999-9999"></label>
+      <button>Confirmar reserva</button><button type="button" class="sec" data-a="voltar">Voltar</button></form>`;
+  },
+  confirmado() {
+    return `<div class="card"><h2>Código ${esc(S.codigoNovo)}</h2>
+      <p>Guarde o código. Ele já foi salvo neste aparelho. A pousada chama você no WhatsApp com o pagamento.</p>
+      <button data-a="irReservas">Ver minhas reservas</button></div>`;
+  },
+  reservas() {
+    const l = ls.get('reservas', []), info = ls.get('info', {});
+    const lista = l.length ? l.map(r => {
+      const i = info[r.codigo];
+      const det = i ? `<p>${esc(i.tipo)}<br>${dmy(i.dataEntrada)} a ${dmy(i.dataSaida)} (${i.noites} noite(s))<br>Total ${brl(i.valorTotal)}, pago ${brl(i.valorPago)}<br><strong>${esc(i.status)}</strong></p>` : '<p class="muted">Ainda sem dados atualizados.</p>';
+      const canc = i && ['Pendente', 'Confirmada'].includes(i.status) ? `<button class="danger" data-a="cancelar" data-c="${esc(r.codigo)}">Cancelar reserva</button>` : '';
+      return `<article class="card"><h2>${esc(r.codigo)}</h2>${det}${canc}<button class="sec" data-a="remover" data-c="${esc(r.codigo)}">Remover da lista</button></article>`;
+    }).join('') : '<p class="muted">Nenhuma reserva salva neste aparelho.</p>';
+    return lista + `<form data-f="adicionar" class="card"><h2>Adicionar reserva</h2>
+      <label>Código<input name="codigo" required placeholder="MM-XXXXX"></label>
+      <label>E-mail da reserva<input name="email" type="email" required></label><button>Adicionar</button></form>`;
+  },
+  contato() {
+    return `<form data-f="contato" class="card"><p class="muted">Envie sua dúvida ou pedido de reserva.</p>
+      <label>Nome<input name="nome" autocomplete="name" required></label>
+      <label>E-mail<input name="email" type="email" autocomplete="email" required></label>
+      <label>Mensagem<textarea name="texto" rows="4" required minlength="5"></textarea></label><button>Enviar</button></form>`;
+  },
+  recepcao() {
+    if (!sessionStorage.getItem('jwt')) return `<form data-f="login" class="card"><h2>Acesso da recepção</h2>
+      <label>Usuário<input name="login" autocomplete="username" required></label>
+      <label>Senha<input name="senha" type="password" autocomplete="current-password" required></label><button>Entrar</button></form>`;
+    const gerente = sessionStorage.getItem('perfil') === 'Gerente';
+    const lista = S.adm === null ? '<p class="muted">Carregando...</p>' : S.adm.map(r => `<article class="card"><h2>${esc(r.codigo)}, ${esc(r.hospede)}</h2>
+      <p>${esc(r.tipo)} (quarto ${esc(r.quarto)})<br>${dmy(r.dataEntrada)} a ${dmy(r.dataSaida)}<br>Total ${brl(r.valorTotal)}, pago ${brl(r.valorPago)}<br><strong>${esc(r.status)}</strong></p>
+      ${['Pendente', 'Confirmada'].includes(r.status) ? `<form data-f="pagar" data-c="${esc(r.codigo)}" class="card">
+        <label>Valor (R$)<input name="valor" type="number" step="0.01" min="0.01" required></label>
+        <label>Forma<select name="forma"><option>Pix</option><option>Cartao</option><option>Dinheiro</option></select></label><button>Registrar pagamento</button></form>
+        ${gerente ? `<button class="danger" data-a="admCancelar" data-c="${esc(r.codigo)}">Cancelar reserva</button>` : ''}` : ''}</article>`).join('');
+    return `<button class="sec" data-a="sair">Sair (${esc(sessionStorage.getItem('perfil'))})</button><br><br>` + lista;
+  }
+};
+
+function render() {
+  $('#titulo').textContent = TITULOS[S.tela];
+  document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-current', String(b.dataset.t === aba())));
+  const m = (S.msg ? `<p class="ok" role="status">${esc(S.msg)}</p>` : '') + (S.err ? `<p class="err" role="alert">${esc(S.err)}</p>` : '');
+  $('#tela').innerHTML = m + T[S.tela]();
+  S.msg = ''; S.err = '';
+}
+function go(t) {
+  S.tela = t; S.msg = S.err = ''; render(); $('#tela').focus();
+  if (t === 'quartos') carregarTipos();
+  if (t === 'reservas') sincronizar();
+  if (t === 'recepcao' && sessionStorage.getItem('jwt') && S.adm === null) carregarAdmin().then(render);
+}
+
+// ---------- sincronização de dados ----------
+async function carregarTipos() {
+  try { S.tipos = await api('/quartos'); ls.set('tipos', S.tipos); } catch { S.tipos = ls.get('tipos', []); }
+  if (S.tela === 'quartos' && !S.res) render();
+}
+async function sincronizar() {
+  const l = ls.get('reservas', []); if (!l.length || !navigator.onLine) return;
+  const info = ls.get('info', {});
+  for (const r of l) { try { info[r.codigo] = await api('/reservas/consulta', {method:'POST', body:r}); } catch (e) { if (e.status === 404) delete info[r.codigo]; } }
+  ls.set('info', info); if (S.tela === 'reservas') render();
+}
+async function enviarFila() {
+  const q = ls.get('fila', []); if (!q.length || !navigator.onLine) return;
+  const resto = [];
+  for (const m of q) { try { await api('/contato', {method:'POST', body:m}); } catch (e) { if (e.rede) resto.push(m); } }
+  ls.set('fila', resto);
+  if (resto.length < q.length) { S.msg = 'Mensagens pendentes enviadas.'; render(); }
+}
+async function carregarAdmin() {
+  try { S.adm = await api('/admin/reservas', {auth:true}); }
+  catch (e) { if (e.status === 401 || e.status === 403) { sair(); S.err = 'Sessão expirada. Entre novamente.'; } else S.err = e.message; }
+}
+function sair() { sessionStorage.clear(); S.adm = null; }
+
+// ---------- ações ----------
+const H = {
+  async buscar(f) {
+    S.busca = {entrada:f.entrada.value, saida:f.saida.value, hospedes:+f.hospedes.value};
+    try { S.res = await api(`/quartos/disponibilidade?entrada=${S.busca.entrada}&saida=${S.busca.saida}&hospedes=${S.busca.hospedes}`); if (!S.res.length) S.err = 'Sem quartos livres nesse período.'; }
+    catch (e) { S.res = null; S.err = e.message; }
+    render();
+  },
+  async reservar(f) {
+    const b = S.busca, q = S.sel;
+    try {
+      const r = await api('/reservas', {method:'POST', body:{idTipoQuarto:q.idTipoQuarto, entrada:b.entrada, saida:b.saida, hospedes:b.hospedes, nome:f.nome.value, email:f.email.value, telefone:f.telefone.value}});
+      const l = ls.get('reservas', []); l.push({codigo:r.codigo, email:f.email.value.trim().toLowerCase()}); ls.set('reservas', l);
+      S.codigoNovo = r.codigo; S.tela = 'confirmado'; S.res = null; sincronizar();
+    } catch (e) { S.err = e.message; }
+    render();
+  },
+  async adicionar(f) {
+    const r = {codigo:f.codigo.value.trim().toUpperCase(), email:f.email.value.trim().toLowerCase()};
+    try {
+      const i = await api('/reservas/consulta', {method:'POST', body:r});
+      const l = ls.get('reservas', []).filter(x => x.codigo !== r.codigo); l.push(r); ls.set('reservas', l);
+      const info = ls.get('info', {}); info[r.codigo] = i; ls.set('info', info); S.msg = 'Reserva adicionada.';
+    } catch (e) { S.err = e.message; }
+    render();
+  },
+  async contato(f) {
+    const m = {nome:f.nome.value, email:f.email.value, texto:f.texto.value};
+    try { await api('/contato', {method:'POST', body:m}); S.msg = 'Mensagem enviada.'; }
+    catch (e) {
+      if (e.rede) { const q = ls.get('fila', []); q.push(m); ls.set('fila', q); S.msg = 'Sem conexão. Mensagem salva e será enviada quando a internet voltar.'; }
+      else S.err = e.message;
+    }
+    render();
+  },
+  async login(f) {
+    try {
+      const d = await api('/auth/login', {method:'POST', body:{login:f.login.value, senha:f.senha.value}});
+      sessionStorage.setItem('jwt', d.token); sessionStorage.setItem('perfil', d.perfil); await carregarAdmin();
+    } catch (e) { S.err = e.status === 429 ? 'Muitas tentativas. Aguarde um minuto.' : e.message; }
+    render();
+  },
+  async pagar(f) {
+    try { await api(`/admin/reservas/${encodeURIComponent(f.dataset.c)}/pagamentos`, {method:'POST', auth:true, body:{valor:+f.valor.value, forma:f.forma.value}}); S.msg = 'Pagamento registrado.'; await carregarAdmin(); }
+    catch (e) { S.err = e.message; }
+    render();
+  }
+};
+const A = {
+  reservar: d => { S.sel = S.res[+d.i]; S.tela = 'reservar'; render(); $('#tela').focus(); },
+  voltar: () => go('quartos'),
+  irReservas: () => go('reservas'),
+  remover: d => { ls.set('reservas', ls.get('reservas', []).filter(x => x.codigo !== d.c)); render(); },
+  async cancelar(d) {
+    if (!confirm('Cancelar esta reserva?')) return;
+    const r = ls.get('reservas', []).find(x => x.codigo === d.c);
+    try { const x = await api('/reservas/cancelamento', {method:'POST', body:r}); S.msg = x.gratuito ? 'Cancelada sem custos.' : 'Cancelada. Faltavam menos de 7 dias: fale com a pousada sobre valores.'; await sincronizar(); }
+    catch (e) { S.err = e.message; }
+    render();
+  },
+  async admCancelar(d) {
+    if (!confirm('Cancelar esta reserva?')) return;
+    try { await api(`/admin/reservas/${encodeURIComponent(d.c)}/cancelamento`, {method:'POST', auth:true}); S.msg = 'Reserva cancelada.'; await carregarAdmin(); }
+    catch (e) { S.err = e.message; }
+    render();
+  },
+  sair: () => { sair(); render(); }
+};
+
+document.addEventListener('submit', e => { const f = e.target.closest('form[data-f]'); if (!f) return; e.preventDefault(); H[f.dataset.f](f); });
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-a],#tabs button'); if (!b) return;
+  if (b.dataset.t) go(b.dataset.t); else A[b.dataset.a](b.dataset);
+});
+const rede = () => { $('#offline').hidden = navigator.onLine; };
+window.addEventListener('online', () => { rede(); enviarFila(); sincronizar(); carregarTipos(); });
+window.addEventListener('offline', rede);
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+rede(); render(); carregarTipos(); enviarFila();
+</script>
+</body>
+</html>

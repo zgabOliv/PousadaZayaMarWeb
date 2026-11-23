@@ -1,0 +1,16 @@
+@model QuartoEdicao
+@{ ViewData["Title"] = "Quarto"; var tipos = (List<TipoQuarto>)ViewBag.Tipos; }
+<partial name="_AdminMenu" />
+<h1>@(Model.IdQuarto is null ? "Novo quarto" : "Editar quarto")</h1>
+<form asp-action="QuartoEditar" method="post" class="stack">
+  <div asp-validation-summary="All" class="err"></div>
+  <input type="hidden" asp-for="IdQuarto">
+  <label>Número<input asp-for="Numero"></label>
+  <label>Tipo
+    <select asp-for="IdTipoQuarto">
+      <option value="0">Escolha...</option>
+      @foreach (var t in tipos) { <option value="@t.IdTipoQuarto" selected="@(Model.IdTipoQuarto == t.IdTipoQuarto)">@t.Nome</option> }
+    </select></label>
+  <label class="radio"><input asp-for="Ativo" type="checkbox"> Ativo (aparece na disponibilidade)</label>
+  <button type="submit">Salvar</button>
+</form>

@@ -1,0 +1,37 @@
+@model List<UsuarioLinha>
+@{ ViewData["Title"] = "Usuários"; var novo = (NovoUsuario)ViewBag.Novo; }
+<partial name="_AdminMenu" />
+<h1>Usuários da equipe</h1>
+<div class="scroll"><table>
+  <thead><tr><th>Login</th><th>Perfil</th><th>Situação</th><th>Alterar</th><th>Nova senha</th></tr></thead>
+  <tbody>
+  @foreach (var u in Model)
+  {
+    <tr>
+      <td>@u.Login</td><td>@u.Perfil</td><td>@(u.Ativo ? "Ativo" : "Desativado")</td>
+      <td>
+        <form asp-action="AlterarUsuario" method="post" class="inline">
+          <input type="hidden" name="id" value="@u.IdUsuario">
+          <select name="perfil" aria-label="Perfil"><option value="Recepcao" selected="@(u.Perfil == "Recepcao")">Recepção</option><option value="Gerente" selected="@(u.Perfil == "Gerente")">Gerente</option></select>
+          <select name="ativo" aria-label="Situação"><option value="true" selected="@u.Ativo">Ativo</option><option value="false" selected="@(!u.Ativo)">Desativado</option></select>
+          <button type="submit">Salvar</button>
+        </form>
+      </td>
+      <td>
+        <form asp-action="SenhaUsuario" method="post" class="inline">
+          <input type="hidden" name="id" value="@u.IdUsuario">
+          <input type="password" name="senha" minlength="8" maxlength="72" placeholder="mín. 8 caracteres" aria-label="Nova senha" autocomplete="new-password" required>
+          <button type="submit" class="sec">Trocar</button>
+        </form>
+      </td>
+    </tr>
+  }
+  </tbody>
+</table></div>
+<h2>Novo usuário</h2>
+<form asp-action="CriarUsuario" method="post" class="stack">
+  <label>Login<input name="Login" maxlength="40" required autocomplete="off"></label>
+  <label>Senha (mínimo 8 caracteres)<input name="Senha" type="password" minlength="8" maxlength="72" required autocomplete="new-password"></label>
+  <label>Perfil<select name="Perfil"><option value="Recepcao">Recepção</option><option value="Gerente">Gerente</option></select></label>
+  <button type="submit">Criar usuário</button>
+</form>

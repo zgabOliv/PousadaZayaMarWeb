@@ -1,0 +1,57 @@
+@model List<ReservaAdmin>
+@{ ViewData["Title"] = "Reservas"; bool Ger = User.IsInRole("Gerente"); string st = ViewBag.Status as string ?? ""; }
+<partial name="_AdminMenu" />
+<h1>Reservas</h1>
+<form method="get" class="book">
+  <label>Buscar por código ou hóspede<input name="q" value="@ViewBag.Q"></label>
+  <label>Situação
+    <select name="status">
+      <option value="">Todas</option>
+      @foreach (var s in new[] { "Pendente", "Confirmada", "Concluida", "Cancelada" }) { <option value="@s" selected="@(st == s)">@s</option> }
+    </select></label>
+  <button type="submit">Filtrar</button>
+  <a class="btn sec" asp-action="NovaReserva">Nova reserva</a>
+</form>
+@if (Model.Count == 0) { <p class="muted">Nenhuma reserva encontrada.</p> }
+<div class="scroll">
+<table>
+  <thead><tr><th>Código</th><th>Hóspede</th><th>Quarto</th><th>Período</th><th>Total</th><th>Pago</th><th>Situação</th><th>Ações</th></tr></thead>
+  <tbody>
+  @foreach (var r in Model)
+  {
+    <tr>
+      <td>@r.Codigo</td><td>@r.Hospede</td><td>@r.Quarto (@r.Tipo)</td>
+      <td>@Fmt.Data(r.DataEntrada) a @Fmt.Data(r.DataSaida)</td>
+      <td>@Fmt.Brl(r.ValorTotal)</td><td>@Fmt.Brl(r.ValorPago)</td>
+      <td><span class="selo st-@r.Status.ToLowerInvariant()">@r.Status</span>@if (r.CheckInEm is not null && r.CheckOutEm is null) { <br><small>hospedado</small> }</td>
+      <td>
+        @if (r.Status is "Pendente" or "Confirmada")
+        {
+          @if (r.ValorPago < r.ValorTotal)
+          {
+            <form asp-action="Pagar" method="post" class="inline">
+              <input type="hidden" name="codigo" value="@r.Codigo">
+              <input type="number" name="valor" step="0.01" min="0.01" max="@((r.ValorTotal - r.ValorPago).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture))" required aria-label="Valor" style="width:6rem" value="@((r.ValorTotal - r.ValorPago).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture))">
+              <select name="forma" aria-label="Forma"><option>Pix</option><option>Cartao</option><option>Dinheiro</option></select>
+              <button type="submit">Pagar</button>
+            </form>
+          }
+          @if (r.CheckInEm is null && r.Status == "Confirmada")
+          {
+            <form asp-action="CheckIn" method="post" class="inline"><input type="hidden" name="codigo" value="@r.Codigo"><input type="hidden" name="volta" value="@Url.Action("Reservas")"><button type="submit" class="sec">Check-in</button></form>
+          }
+          @if (r.CheckInEm is not null && r.CheckOutEm is null)
+          {
+            <form asp-action="CheckOut" method="post" class="inline"><input type="hidden" name="codigo" value="@r.Codigo"><input type="hidden" name="volta" value="@Url.Action("Reservas")"><button type="submit" class="sec">Check-out</button></form>
+          }
+          @if (Ger && r.CheckInEm is null)
+          {
+            <form asp-action="CancelarReserva" method="post" class="inline"><input type="hidden" name="codigo" value="@r.Codigo"><button type="submit" class="danger">Cancelar</button></form>
+          }
+        }
+      </td>
+    </tr>
+  }
+  </tbody>
+</table>
+</div>

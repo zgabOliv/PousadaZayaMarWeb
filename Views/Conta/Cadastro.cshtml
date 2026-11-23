@@ -1,0 +1,13 @@
+@model CadastroModel
+@{ ViewData["Title"] = "Criar conta"; }
+<h1>Criar conta</h1>
+<p class="muted">Com a conta você acompanha, cancela e avalia suas reservas. Já tem conta? <a asp-action="Entrar">Entrar</a>.</p>
+<form asp-action="Cadastro" method="post" class="stack">
+  <div asp-validation-summary="ModelOnly" class="err"></div>
+  <label>Nome completo<input asp-for="Nome" autocomplete="name"><span asp-validation-for="Nome" class="err"></span></label>
+  <label>E-mail<input asp-for="Email" type="email" autocomplete="email"><span asp-validation-for="Email" class="err"></span></label>
+  <label>WhatsApp<input asp-for="Telefone" inputmode="tel" autocomplete="tel" placeholder="(13) 99999-9999"><span asp-validation-for="Telefone" class="err"></span></label>
+  <label>Senha (mínimo 8 caracteres)<input asp-for="Senha" type="password" autocomplete="new-password"><span asp-validation-for="Senha" class="err"></span></label>
+  <label>Repita a senha<input asp-for="Senha2" type="password" autocomplete="new-password"><span asp-validation-for="Senha2" class="err"></span></label>
+  <button type="submit">Criar conta</button>
+</form>

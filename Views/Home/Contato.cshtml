@@ -1,7 +1,7 @@
 @model ContatoModel
 @{ ViewData["Title"] = "Contato"; }
 <h1>Fale com a gente</h1>
-<p class="muted">Atendimento diário, das 8h às 20h. WhatsApp (13) 90000-0000.</p>
+<p class="muted">Envie sua dúvida ou pedido de reserva e a pousada responde por aqui.</p>
 <form asp-action="Contato" method="post" class="stack">
   <div asp-validation-summary="ModelOnly" class="err"></div>
   <label>Nome<input asp-for="Nome" autocomplete="name"><span asp-validation-for="Nome" class="err"></span></label>

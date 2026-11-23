@@ -1,0 +1,14 @@
+@model List<HospedeAdmin>
+@{ ViewData["Title"] = "Hóspedes"; }
+<partial name="_AdminMenu" />
+<h1>Hóspedes</h1>
+<p class="muted">@Model.Count cadastrado(s). Dados pessoais só para atendimento (LGPD).</p>
+<div class="scroll"><table>
+  <thead><tr><th>Nome</th><th>E-mail</th><th>WhatsApp</th><th>Conta no site</th><th>Reservas</th><th>Última estadia</th></tr></thead>
+  <tbody>
+  @foreach (var h in Model)
+  {
+    <tr><td>@h.Nome</td><td>@h.Email</td><td>@h.Telefone</td><td>@(h.TemConta ? "Sim" : "Não")</td><td>@h.Reservas</td><td>@(h.UltimaEstadia is { } u ? Fmt.Data(u) : "-")</td></tr>
+  }
+  </tbody>
+</table></div>

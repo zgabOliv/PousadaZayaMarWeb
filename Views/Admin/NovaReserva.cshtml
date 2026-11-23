@@ -1,0 +1,25 @@
+@model NovaReservaAdmin
+@{ ViewData["Title"] = "Nova reserva"; var tipos = (List<TipoQuarto>)ViewBag.Tipos; }
+<partial name="_AdminMenu" />
+<h1>Nova reserva (balcão ou telefone)</h1>
+<p class="muted">O sistema escolhe o primeiro quarto livre do tipo e bloqueia conflitos. Se o pagamento for informado e cobrir o total, a reserva já fica confirmada.</p>
+<form asp-action="NovaReserva" method="post" class="stack">
+  <div asp-validation-summary="All" class="err"></div>
+  <label>Suíte
+    <select asp-for="IdTipoQuarto">
+      <option value="0">Escolha...</option>
+      @foreach (var t in tipos) { <option value="@t.IdTipoQuarto" selected="@(Model.IdTipoQuarto == t.IdTipoQuarto)">@t.Nome (até @t.Capacidade, @Fmt.Brl(t.PrecoDiaria)/noite)</option> }
+    </select></label>
+  <label>Entrada<input asp-for="Entrada" type="date" value="@Model.Entrada?.ToString("yyyy-MM-dd")"></label>
+  <label>Saída<input asp-for="Saida" type="date" value="@Model.Saida?.ToString("yyyy-MM-dd")"></label>
+  <label>Hóspedes<input asp-for="Hospedes" type="number" min="1" max="8"></label>
+  <label>Nome completo<input asp-for="Nome" autocomplete="off"></label>
+  <label>E-mail<input asp-for="Email" type="email" autocomplete="off"></label>
+  <label>WhatsApp<input asp-for="Telefone" inputmode="tel" autocomplete="off" placeholder="(13) 99999-9999"></label>
+  <fieldset class="estrelas">
+    <legend>Pagamento na hora (opcional)</legend>
+    <label>Valor recebido (R$)<input asp-for="ValorPago" type="number" step="0.01" min="0"></label>
+    <label>Forma<select asp-for="Forma"><option value="">-</option><option>Pix</option><option>Cartao</option><option>Dinheiro</option></select></label>
+  </fieldset>
+  <button type="submit">Criar reserva</button>
+</form>

@@ -1,0 +1,9 @@
+@model EsqueciModel
+@{ ViewData["Title"] = "Esqueci minha senha"; }
+<h1>Esqueci minha senha</h1>
+<p class="muted">Informe o e-mail da conta. Enviaremos um link para criar uma nova senha (vale por 1 hora).</p>
+<form asp-action="Esqueci" method="post" class="stack">
+  <div asp-validation-summary="All" class="err"></div>
+  <label>E-mail<input asp-for="Email" type="email" autocomplete="email"></label>
+  <button type="submit">Enviar link</button>
+</form>

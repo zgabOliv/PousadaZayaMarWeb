@@ -1,0 +1,17 @@
+@model AvaliarModel
+@{ ViewData["Title"] = "Avaliar estadia"; }
+<h1>Avaliar a estadia @Model.Codigo</h1>
+<form asp-action="Avaliar" method="post" class="stack">
+  <div asp-validation-summary="All" class="err"></div>
+  <input type="hidden" asp-for="Codigo">
+  <fieldset class="estrelas">
+    <legend>Sua nota</legend>
+    @for (var n = 1; n <= 5; n++)
+    {
+      <label class="radio"><input type="radio" name="Nota" value="@n" checked="@(Model.Nota == n)"> @n @(n == 1 ? "estrela" : "estrelas")</label>
+    }
+  </fieldset>
+  <label>Comentário (opcional, até 500 caracteres)<textarea asp-for="Comentario" rows="4" maxlength="500"></textarea></label>
+  <p class="muted">Seu primeiro nome e o comentário aparecem no site.</p>
+  <button type="submit">Enviar avaliação</button>
+</form>

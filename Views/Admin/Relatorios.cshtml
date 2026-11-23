@@ -1,0 +1,43 @@
+@model List<LinhaRelatorio>
+@{ ViewData["Title"] = "Relatórios"; var ini = (DateTime)ViewBag.Inicio; var fim = (DateTime)ViewBag.Fim; var rec = (List<ReceitaMes>)ViewBag.Receita;
+   string Pct(decimal v) => v.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture).Replace('.', ',') + "%"; }
+<partial name="_AdminMenu" />
+<h1>Relatórios</h1>
+<h2>Ocupação por suíte</h2>
+<form method="get" class="book">
+  <label>De<input type="date" name="inicio" value="@ini.ToString("yyyy-MM-dd")"></label>
+  <label>Até (exclusive)<input type="date" name="fim" value="@fim.ToString("yyyy-MM-dd")"></label>
+  <button type="submit">Gerar</button>
+</form>
+<div class="scroll"><table>
+  <thead><tr><th>Suíte</th><th>Quartos</th><th>Reservas</th><th>Diárias ocupadas</th><th>Diárias disponíveis</th><th>Taxa de ocupação</th><th>Valor reservado</th></tr></thead>
+  <tbody>
+  @foreach (var l in Model)
+  {
+    <tr><td>@l.Tipo</td><td>@l.Unidades</td><td>@l.Reservas</td><td>@l.DiariasOcupadas</td><td>@l.DiariasDisponiveis</td>
+        <td><span class="barra" style="--p:@l.TaxaOcupacao.ToString("0", System.Globalization.CultureInfo.InvariantCulture)%"></span> @Pct(l.TaxaOcupacao)</td><td>@Fmt.Brl(l.ValorReservado)</td></tr>
+  }
+  @if (Model.Count > 0)
+  {
+    var dd = Model.Sum(x => x.DiariasDisponiveis); var oo = Model.Sum(x => x.DiariasOcupadas);
+    <tr class="total"><td>Total</td><td>@Model.Sum(x => x.Unidades)</td><td>@Model.Sum(x => x.Reservas)</td><td>@oo</td><td>@dd</td><td>@Pct(dd == 0 ? 0 : Math.Round(100m * oo / dd, 1))</td><td>@Fmt.Brl(Model.Sum(x => x.ValorReservado))</td></tr>
+  }
+  </tbody>
+</table></div>
+<p class="muted">Reservas canceladas não contam. O período termina na data final, sem incluí-la.</p>
+<h2>Receita recebida por mês (últimos 12 meses)</h2>
+@if (rec.Count == 0) { <p class="muted">Ainda não há pagamentos aprovados.</p> }
+else
+{
+  var max = rec.Max(r => r.Receita);
+  <div class="scroll"><table>
+    <thead><tr><th>Mês</th><th>Reservas pagas</th><th>Receita</th><th></th></tr></thead>
+    <tbody>
+    @foreach (var r in rec)
+    {
+      <tr><td>@r.Mes.ToString("00")/@r.Ano</td><td>@r.Reservas</td><td>@Fmt.Brl(r.Receita)</td>
+          <td><span class="barra" style="--p:@((max == 0 ? 0 : 100 * r.Receita / max).ToString("0", System.Globalization.CultureInfo.InvariantCulture))%"></span></td></tr>
+    }
+    </tbody>
+  </table></div>
+}

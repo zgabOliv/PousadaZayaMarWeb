@@ -1,0 +1,10 @@
+@model RedefinirModel
+@{ ViewData["Title"] = "Nova senha"; }
+<h1>Criar nova senha</h1>
+<form asp-action="Redefinir" method="post" class="stack">
+  <div asp-validation-summary="All" class="err"></div>
+  <input type="hidden" asp-for="Token">
+  <label>Nova senha (mínimo 8 caracteres)<input asp-for="Senha" type="password" autocomplete="new-password"></label>
+  <label>Repita a senha<input asp-for="Senha2" type="password" autocomplete="new-password"></label>
+  <button type="submit">Salvar senha</button>
+</form>
